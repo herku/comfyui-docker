@@ -15,7 +15,7 @@ expected_nodes=(
 
 cleanup() {
   docker logs "$container" > smoke-test.log 2>&1 || true
-  docker rm -f "$container" > /dev/null 2>&1 || true
+  docker rm -fv "$container" > /dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
