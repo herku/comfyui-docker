@@ -42,18 +42,21 @@ RUN python -m venv /opt/venv \
  && python -c "import torch; assert torch.version.cuda is None, torch.version.cuda" \
  && uv pip freeze | grep -E '^(torch|torchvision|torchaudio)==' > /opt/constraints.txt
 
-RUN find /opt/comfyui/custom_nodes -mindepth 2 -maxdepth 2 -name requirements.txt -printf '-r\n%p\n' \
-    | xargs uv pip install -r /opt/comfyui/requirements.txt -r /opt/comfyui/manager_requirements.txt \
+RUN shopt -s nullglob \
+ && node_requirements=() \
+ && for file in /opt/comfyui/custom_nodes/*/requirements.txt; do node_requirements+=(-r "$file"); done \
+ && uv pip install -r /opt/comfyui/requirements.txt -r /opt/comfyui/manager_requirements.txt "${node_requirements[@]}" \
  && python -c "import torch; assert torch.version.cuda is None, torch.version.cuda"
 
 COPY docker/extra_model_paths.yaml /opt/comfyui/extra_model_paths.yaml
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint
+COPY docker/healthcheck.py /usr/local/bin/healthcheck
 
 WORKDIR /data
 VOLUME /data
 EXPOSE 8188
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s \
-  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8188/system_stats', timeout=4)"]
+  CMD ["python", "/usr/local/bin/healthcheck"]
 
 ENTRYPOINT ["entrypoint"]

@@ -3,7 +3,7 @@ set -euo pipefail
 
 data_dir=/data
 runtime_nodes_dir=$data_dir/custom_nodes
-deps_marker=/opt/venv/.runtime-custom-nodes-deps.sha256
+deps_state_dir=/opt/venv/.runtime-custom-nodes-deps
 
 mkdir -p "$runtime_nodes_dir" "$data_dir/user" "$data_dir/input" "$data_dir/output" "$data_dir/models"
 
@@ -11,20 +11,22 @@ restore_runtime_node_deps() {
   shopt -s nullglob
   local requirement_files=("$runtime_nodes_dir"/*/requirements.txt)
   shopt -u nullglob
-  ((${#requirement_files[@]})) || return 0
+  mkdir -p "$deps_state_dir"
 
-  local digest
-  digest=$(cat "${requirement_files[@]}" | sha256sum | cut -d' ' -f1)
-  [[ -f $deps_marker && $(<"$deps_marker") == "$digest" ]] && return 0
+  local file node digest marker
+  for file in "${requirement_files[@]}"; do
+    node=$(basename "$(dirname "$file")")
+    digest=$(sha256sum "$file" | cut -d' ' -f1)
+    marker=$deps_state_dir/$node.sha256
+    [[ -f $marker && $(<"$marker") == "$digest" ]] && continue
 
-  echo "[entrypoint] installing dependencies of Manager-installed custom nodes"
-  local args=()
-  for file in "${requirement_files[@]}"; do args+=(-r "$file"); done
-  if uv pip install "${args[@]}"; then
-    echo "$digest" > "$deps_marker"
-  else
-    echo "[entrypoint] WARNING: dependency install failed, affected nodes may not load" >&2
-  fi
+    echo "[entrypoint] installing dependencies of custom node $node"
+    if uv pip install -r "$file"; then
+      echo "$digest" > "$marker"
+    else
+      echo "[entrypoint] WARNING: dependency install failed for custom node $node, it may not load" >&2
+    fi
+  done
 }
 
 enforce_manager_security() {
@@ -35,7 +37,12 @@ import configparser, os, sys
 path, network_mode = sys.argv[1], sys.argv[2]
 os.makedirs(os.path.dirname(path), exist_ok=True)
 config = configparser.ConfigParser(strict=False)
-config.read(path)
+try:
+    config.read(path)
+except (configparser.Error, UnicodeDecodeError) as error:
+    print(f"[entrypoint] WARNING: {path} is malformed ({error}), moving it to {path}.corrupt", file=sys.stderr)
+    os.replace(path, path + ".corrupt")
+    config = configparser.ConfigParser(strict=False)
 if not config.has_section("default"):
     config.add_section("default")
 config["default"]["network_mode"] = network_mode

@@ -15,7 +15,10 @@ while read -r url commit; do
     echo "$url${commit:+ $commit}" >> "$updated_nodes"
     continue
   fi
-  head_commit=$(git ls-remote "$url" HEAD | cut -f1)
+  if ! head_commit=$(GIT_TERMINAL_PROMPT=0 git ls-remote "$url" HEAD | cut -f1); then
+    echo "WARNING: cannot reach $url, keeping $commit" >&2
+    head_commit=
+  fi
   echo "$url ${head_commit:-$commit}" >> "$updated_nodes"
 done < "$nodes_file"
 mv "$updated_nodes" "$nodes_file"
