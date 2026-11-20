@@ -33,8 +33,9 @@ for node in "${expected_nodes[@]}"; do
   jq -e --arg n "$node" 'has($n)' <<< "$object_info" > /dev/null || missing+=("$node")
 done
 
-if docker logs "$container" 2>&1 | grep -q "IMPORT FAILED"; then
-  docker logs "$container" 2>&1 | grep -B2 -A2 "IMPORT FAILED" >&2
+container_log=$(docker logs "$container" 2>&1)
+if grep -q "IMPORT FAILED" <<< "$container_log"; then
+  grep -B2 -A2 "IMPORT FAILED" <<< "$container_log" >&2
   echo "custom node import failure" >&2
   exit 1
 fi
@@ -44,9 +45,9 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-docker exec "$container" python -c "import comfyui_manager" \
+docker exec -w /opt/comfyui "$container" python -c "import comfyui_manager" \
   || { echo "ComfyUI-Manager not importable" >&2; exit 1; }
-docker logs "$container" 2>&1 | grep -qi "ComfyUI-Manager" \
+grep -q "\[START\] ComfyUI-Manager" <<< "$container_log" \
   || { echo "ComfyUI-Manager did not start" >&2; exit 1; }
 
 manager_config=$(docker exec "$container" cat /data/user/__manager/config.ini)

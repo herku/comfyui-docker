@@ -10,6 +10,7 @@ ENV VIRTUAL_ENV=/opt/venv \
     PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
+    UV_NO_CACHE=1 \
     UV_PYTHON=/opt/venv/bin/python \
     UV_CONSTRAINT=/opt/constraints.txt \
     PIP_CONSTRAINT=/opt/constraints.txt \
@@ -21,7 +22,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git libgl1 libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ghcr.io/astral-sh/uv:0.13.9 /uv /usr/local/bin/uv
+RUN PIP_CONSTRAINT= pip install --no-cache-dir uv==0.13.9
 
 RUN useradd --create-home --uid 1000 comfy \
  && mkdir -p /opt/venv /data \
