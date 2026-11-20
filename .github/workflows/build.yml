@@ -54,7 +54,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -63,7 +63,7 @@ jobs:
 
       - name: Push by digest
         id: push
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -72,7 +72,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.platform }}
 
       - name: Export digest
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p /tmp/digests
           touch "/tmp/digests/${DIGEST#sha256:}"
@@ -80,14 +80,14 @@ jobs:
           DIGEST: ${{ steps.push.outputs.digest }}
 
       - uses: actions/upload-artifact@v7
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         with:
           name: digest-${{ matrix.runner }}
           path: /tmp/digests/*
           retention-days: 1
 
   publish:
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-24.04
     permissions:

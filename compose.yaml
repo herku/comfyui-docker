@@ -3,7 +3,7 @@ services:
     image: ghcr.io/herku/comfyui-api:latest
     build: .
     ports:
-      - "8188:8188"
+      - "127.0.0.1:8188:8188"
     env_file:
       - path: .env
         required: false

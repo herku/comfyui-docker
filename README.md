@@ -20,7 +20,7 @@ cp .env.example .env   # fill in the keys you use
 docker compose up -d
 ```
 
-UI and HTTP API on port 8188. All state lives in the `/data` volume: `user/` (workflows, settings, Manager config), `input/`, `output/`, `custom_nodes/` (Manager-installed nodes).
+UI and HTTP API on `127.0.0.1:8188` (compose binds loopback only; point your reverse proxy at it, or change the port mapping deliberately). All state lives in the `/data` volume: `user/` (workflows, settings, Manager config), `input/`, `output/`, `custom_nodes/` (Manager-installed nodes).
 
 ### Partner node login
 
@@ -42,7 +42,7 @@ Node folders persist in `/data/custom_nodes`. Their Python dependencies live in 
 
 ## CI
 
-- `build.yml`: on PR, builds both arches on native runners and runs `scripts/smoke-test.sh` (checks node classes per pack, import failures, Manager). On `main`, also pushes `:latest`, `:<comfyui-version>` and `:<comfyui-version>-<sha>`.
-- `bump.yml`: daily, bumps `COMFYUI_VERSION` to the latest ComfyUI release and the node pins to their HEAD, opens a PR on `bump/upstream`, then dispatches `build.yml` on that branch.
+- `build.yml`: on PR, builds both arches on native runners and runs `scripts/smoke-test.sh` (checks node classes per pack, import failures, Manager). Only on `main` does it push `:latest`, `:<comfyui-version>` and `:<comfyui-version>-<sha>`.
+- `bump.yml`: daily, bumps `COMFYUI_VERSION` to the latest ComfyUI release and the node pins to their HEAD, opens a PR on `bump/upstream`, then dispatches `build.yml` on that branch (build and smoke test only, no push).
 
 Repo settings required: Settings > Actions > General > Workflow permissions: enable "Allow GitHub Actions to create and approve pull requests".
