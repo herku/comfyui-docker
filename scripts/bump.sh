@@ -5,7 +5,9 @@ repo_root=$(cd "$(dirname "$0")/.." && pwd)
 dockerfile=$repo_root/Dockerfile
 nodes_file=$repo_root/custom_nodes.txt
 
-latest_comfyui=$(gh api repos/comfyanonymous/ComfyUI/releases/latest --jq .tag_name)
+pinned_comfyui=$(sed -nE 's/^ARG COMFYUI_VERSION=//p' "$dockerfile")
+latest_release=$(gh api repos/comfyanonymous/ComfyUI/releases/latest --jq .tag_name)
+latest_comfyui=$(printf '%s\n' "$pinned_comfyui" "$latest_release" | sort -V | tail -1)
 sed -i.bak -E "s/^ARG COMFYUI_VERSION=.*/ARG COMFYUI_VERSION=$latest_comfyui/" "$dockerfile"
 rm "$dockerfile.bak"
 
