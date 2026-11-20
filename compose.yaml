@@ -2,13 +2,20 @@ services:
   comfyui:
     image: ghcr.io/herku/comfyui-api:latest
     build: .
-    ports:
-      - "127.0.0.1:8188:8188"
     env_file:
-      - path: .env
+      - path: comfyui.env
         required: false
     volumes:
       - comfyui-data:/data
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.11.1
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env}
+    depends_on:
+      - comfyui
     restart: unless-stopped
 
 volumes:

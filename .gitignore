@@ -1,3 +1,4 @@
 .env
+comfyui.env
 smoke-test.log
 .DS_Store

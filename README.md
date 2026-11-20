@@ -16,11 +16,39 @@ Pinned packs are listed in `custom_nodes.txt` (`<git url> <commit>`).
 ## Run
 
 ```sh
-cp .env.example .env   # fill in the keys you use
+cp .env.example .env                  # TUNNEL_TOKEN only, read by compose for cloudflared
+cp comfyui.env.example comfyui.env    # provider keys, passed to ComfyUI only
 docker compose up -d
 ```
 
-UI and HTTP API on `127.0.0.1:8188` (compose binds loopback only; point your reverse proxy at it, or change the port mapping deliberately). All state lives in the `/data` volume: `user/` (workflows, settings, Manager config), `input/`, `output/`, `custom_nodes/` (Manager-installed nodes).
+ComfyUI publishes no host port. The only way in is the Cloudflare Tunnel, gated by Cloudflare Access. The tunnel token is kept out of the ComfyUI container so custom nodes cannot read it.
+
+All state lives in the `/data` volume: `user/` (workflows, settings, Manager config), `input/`, `output/`, `custom_nodes/` (Manager-installed nodes).
+
+Local test without the tunnel: `docker run --rm -p 127.0.0.1:8188:8188 --env-file comfyui.env ghcr.io/herku/comfyui-api:latest`, then open http://127.0.0.1:8188.
+
+### Cloudflare setup (one-off)
+
+Requires a domain on Cloudflare DNS. Below, `comfy.example.com` stands for your hostname.
+
+1. Cloudflare dashboard > Zero Trust > Networks > Tunnels > Create a tunnel > Cloudflared. Name it `comfyui`.
+2. On the install step, copy the token from the shown command (the long string after `--token`) into `.env` as `TUNNEL_TOKEN=`.
+3. Next > Public hostname: subdomain `comfy`, domain `example.com`, service type `HTTP`, URL `comfyui:8188`. Save.
+4. Zero Trust > Access > Service credentials > Service Tokens > Create. Name `comfyui-scripts`. Copy Client ID and Client Secret (the secret is shown once).
+5. Zero Trust > Access > Applications > Add an application > Self-hosted. Name `ComfyUI`, domain `comfy.example.com`, session duration `24 hours`.
+6. Add policy `owner`: action `Allow`, include `Emails` = your email address. Login method: One-time PIN.
+7. Add policy `scripts`: action `Service Auth`, include `Service Token` = `comfyui-scripts`.
+8. Save the application, open it again and copy the **Application Audience (AUD) Tag**.
+9. Zero Trust > Networks > Tunnels > `comfyui` > Public hostname `comfy.example.com` > Edit > Additional application settings > Access: enable **Protect with Access** (labelled "Enforce Access JSON Web Token (JWT) validation" in some dashboard versions), team name = your Zero Trust team name, AUD tag from step 8. Save. cloudflared now rejects any request without a valid Access token.
+10. `docker compose up -d`, open https://comfy.example.com, sign in with the emailed PIN.
+
+Scripts call the API with the service token:
+
+```sh
+curl https://comfy.example.com/system_stats \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
+```
 
 ### Partner node login
 
@@ -34,7 +62,9 @@ Headless: add the key to the `/prompt` payload:
 
 ## Security
 
-The image ships no authentication. Put it behind a reverse proxy with auth before exposing it. Anyone who reaches port 8188 can spend your API credits, read outputs and, through ComfyUI-Manager, install code that can read every key in the environment.
+- Every custom node runs inside the ComfyUI process and can read every key in `comfyui.env`. Access keeps strangers out; it does not protect keys from a malicious node you install yourself.
+- The entrypoint forces ComfyUI-Manager to `network_mode = personal_cloud`, `security_level = normal` on every start. Installs from the Manager registry are allowed; installs from arbitrary git URLs or pip specs are blocked.
+- Prefer adding nodes to `custom_nodes.txt` (reviewed, pinned, smoke-tested in CI) over installing them in the UI.
 
 ## Manager-installed nodes
 

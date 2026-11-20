@@ -27,7 +27,24 @@ restore_runtime_node_deps() {
   fi
 }
 
+enforce_manager_security() {
+  python - "$data_dir/user/__manager/config.ini" <<'PY'
+import configparser, os, sys
+path = sys.argv[1]
+os.makedirs(os.path.dirname(path), exist_ok=True)
+config = configparser.ConfigParser(strict=False)
+config.read(path)
+if not config.has_section("default"):
+    config.add_section("default")
+config["default"]["network_mode"] = "personal_cloud"
+config["default"]["security_level"] = "normal"
+with open(path, "w") as f:
+    config.write(f)
+PY
+}
+
 restore_runtime_node_deps
+enforce_manager_security
 
 exec python /opt/comfyui/main.py \
   --base-directory "$data_dir" \
