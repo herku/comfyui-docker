@@ -28,15 +28,17 @@ restore_runtime_node_deps() {
 }
 
 enforce_manager_security() {
-  python - "$data_dir/user/__manager/config.ini" <<'PY'
+  local network_mode=public
+  [[ ${COMFYUI_MANAGER_REMOTE_INSTALLS:-false} == true ]] && network_mode=personal_cloud
+  python - "$data_dir/user/__manager/config.ini" "$network_mode" <<'PY'
 import configparser, os, sys
-path = sys.argv[1]
+path, network_mode = sys.argv[1], sys.argv[2]
 os.makedirs(os.path.dirname(path), exist_ok=True)
 config = configparser.ConfigParser(strict=False)
 config.read(path)
 if not config.has_section("default"):
     config.add_section("default")
-config["default"]["network_mode"] = "personal_cloud"
+config["default"]["network_mode"] = network_mode
 config["default"]["security_level"] = "normal"
 with open(path, "w") as f:
     config.write(f)

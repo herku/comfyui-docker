@@ -40,7 +40,8 @@ Requires a domain on Cloudflare DNS. Below, `comfy.example.com` stands for your 
 7. Add policy `scripts`: action `Service Auth`, include `Service Token` = `comfyui-scripts`.
 8. Save the application, open it again and copy the **Application Audience (AUD) Tag**.
 9. Zero Trust > Networks > Tunnels > `comfyui` > Public hostname `comfy.example.com` > Edit > Additional application settings > Access: enable **Protect with Access** (labelled "Enforce Access JSON Web Token (JWT) validation" in some dashboard versions), team name = your Zero Trust team name, AUD tag from step 8. Save. cloudflared now rejects any request without a valid Access token.
-10. `docker compose up -d`, open https://comfy.example.com, sign in with the emailed PIN.
+10. `docker compose up -d`, open https://comfy.example.com, sign in with the emailed PIN. Confirm a private window without the PIN gets the Access login page.
+11. Only now, to allow Manager installs: set `COMFYUI_MANAGER_REMOTE_INSTALLS=true` in `comfyui.env`, then `docker compose up -d`.
 
 Scripts call the API with the service token:
 
@@ -63,7 +64,7 @@ Headless: add the key to the `/prompt` payload:
 ## Security
 
 - Every custom node runs inside the ComfyUI process and can read every key in `comfyui.env`. Access keeps strangers out; it does not protect keys from a malicious node you install yourself.
-- The entrypoint forces ComfyUI-Manager to `network_mode = personal_cloud`, `security_level = normal` on every start. Installs from the Manager registry are allowed; installs from arbitrary git URLs or pip specs are blocked.
+- The entrypoint rewrites ComfyUI-Manager's `network_mode` and `security_level = normal` on every start. Default `network_mode = public`: Manager refuses all installs. Set `COMFYUI_MANAGER_REMOTE_INSTALLS=true` in `comfyui.env` only after Cloudflare setup step 9 is done: it switches to `personal_cloud`, which allows installs from the Manager registry while still blocking arbitrary git URLs and pip specs.
 - Prefer adding nodes to `custom_nodes.txt` (reviewed, pinned, smoke-tested in CI) over installing them in the UI.
 
 ## Manager-installed nodes

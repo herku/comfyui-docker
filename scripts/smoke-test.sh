@@ -50,7 +50,7 @@ docker logs "$container" 2>&1 | grep -qi "ComfyUI-Manager" \
   || { echo "ComfyUI-Manager did not start" >&2; exit 1; }
 
 manager_config=$(docker exec "$container" cat /data/user/__manager/config.ini)
-for setting in "network_mode = personal_cloud" "security_level = normal"; do
+for setting in "network_mode = public" "security_level = normal"; do
   grep -qx "$setting" <<< "$manager_config" \
     || { echo "Manager config missing '$setting': $manager_config" >&2; exit 1; }
 done
