@@ -1,0 +1,38 @@
+name: bump
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Update ComfyUI release and custom node pins
+        id: bump
+        run: scripts/bump.sh | tee -a "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - uses: peter-evans/create-pull-request@v8
+        id: pr
+        with:
+          branch: bump/upstream
+          delete-branch: true
+          commit-message: "Bump ComfyUI to ${{ steps.bump.outputs.comfyui }} and custom node pins"
+          title: "Bump ComfyUI to ${{ steps.bump.outputs.comfyui }} and custom node pins"
+          body: Automated upstream bump. The build workflow is dispatched on this branch because PRs opened with GITHUB_TOKEN do not trigger pull_request runs.
+
+      - name: Run build on bump branch
+        if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
+        run: gh workflow run build.yml --ref bump/upstream
+        env:
+          GH_TOKEN: ${{ github.token }}

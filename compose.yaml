@@ -1,0 +1,15 @@
+services:
+  comfyui:
+    image: ghcr.io/herku/comfyui-api:latest
+    build: .
+    ports:
+      - "8188:8188"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - comfyui-data:/data
+    restart: unless-stopped
+
+volumes:
+  comfyui-data:
