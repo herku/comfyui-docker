@@ -29,10 +29,16 @@ jobs:
           delete-branch: true
           commit-message: "Bump ComfyUI to ${{ steps.bump.outputs.comfyui }} and custom node pins"
           title: "Bump ComfyUI to ${{ steps.bump.outputs.comfyui }} and custom node pins"
-          body: Automated upstream bump. The build workflow is dispatched on this branch because PRs opened with GITHUB_TOKEN do not trigger pull_request runs.
+          body: Automated upstream bump. The bump workflow builds this branch, squash-merges on success, then dispatches the main build that publishes the image.
 
-      - name: Run build on bump branch
+      - name: Build bump branch, merge on success, publish from main
         if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
-        run: gh workflow run build.yml --ref bump/upstream
+        run: |
+          run_url=$(gh workflow run build.yml --ref bump/upstream)
+          run_id=${run_url##*/}
+          [[ $run_id =~ ^[0-9]+$ ]] || { echo "No run id in: $run_url"; exit 1; }
+          gh run watch "$run_id" --exit-status
+          gh pr merge "${{ steps.pr.outputs.pull-request-number }}" --squash --delete-branch
+          gh workflow run build.yml --ref main
         env:
           GH_TOKEN: ${{ github.token }}
