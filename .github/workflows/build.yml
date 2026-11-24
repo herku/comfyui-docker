@@ -40,7 +40,7 @@ jobs:
           load: true
           tags: comfyui-api:smoke
           cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+          cache-to: ${{ github.ref == 'refs/heads/main' && format('type=gha,mode=max,scope={0}', matrix.platform) || '' }}
 
       - name: Smoke test
         run: scripts/smoke-test.sh comfyui-api:smoke

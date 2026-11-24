@@ -3,7 +3,6 @@ FROM python:3.12-slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-ARG COMFYUI_VERSION=v0.46.1
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 
 ENV VIRTUAL_ENV=/opt/venv \
@@ -29,6 +28,16 @@ RUN useradd --create-home --uid 1000 comfy \
  && touch /opt/constraints.txt \
  && chown comfy:comfy /opt/venv /data /opt/constraints.txt
 
+USER 1000:1000
+
+RUN python -m venv /opt/venv \
+ && uv pip install --index-url "$TORCH_INDEX_URL" torch torchvision torchaudio \
+ && python -c "import torch; assert torch.version.cuda is None, torch.version.cuda" \
+ && uv pip freeze | grep -E '^(torch|torchvision|torchaudio)==' > /opt/constraints.txt
+
+USER root
+
+ARG COMFYUI_VERSION=v0.46.1
 RUN git clone --depth 1 --branch "$COMFYUI_VERSION" https://github.com/comfyanonymous/ComfyUI /opt/comfyui
 
 COPY custom_nodes.txt /opt/custom_nodes.txt
@@ -36,11 +45,6 @@ COPY scripts/clone-custom-nodes.sh /usr/local/bin/clone-custom-nodes
 RUN clone-custom-nodes /opt/custom_nodes.txt /opt/comfyui/custom_nodes
 
 USER 1000:1000
-
-RUN python -m venv /opt/venv \
- && uv pip install --index-url "$TORCH_INDEX_URL" torch torchvision torchaudio \
- && python -c "import torch; assert torch.version.cuda is None, torch.version.cuda" \
- && uv pip freeze | grep -E '^(torch|torchvision|torchaudio)==' > /opt/constraints.txt
 
 RUN shopt -s nullglob \
  && node_requirements=() \

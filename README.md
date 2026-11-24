@@ -74,6 +74,6 @@ Node folders persist in `/data/custom_nodes`. Their Python dependencies live in 
 ## CI
 
 - `build.yml`: on PR, builds both arches on native runners and runs `scripts/smoke-test.sh` (checks node classes per pack, import failures, Manager). Only on `main` does it push `:latest`, `:<comfyui-version>` and `:<comfyui-version>-<sha>`.
-- `bump.yml`: daily, bumps `COMFYUI_VERSION` to the latest ComfyUI release and the node pins to their HEAD, opens a PR on `bump/upstream`, then dispatches `build.yml` on that branch (build and smoke test only, no push).
+- `bump.yml`: daily, bumps `COMFYUI_VERSION` to the latest ComfyUI release and the node pins to their HEAD, opens a PR on `bump/upstream`, builds and smoke tests that branch, squash-merges the PR on success, then dispatches `build.yml` on `main` to publish the image.
 
 Repo settings required: Settings > Actions > General > Workflow permissions: enable "Allow GitHub Actions to create and approve pull requests".
