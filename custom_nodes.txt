@@ -1,2 +1,2 @@
-https://github.com/gokayfem/ComfyUI-fal-API 5e8ca5d32dd69a058d4e0d8cc5aca326040541e2
+https://github.com/gokayfem/ComfyUI-fal-API 3fbbaddba87cc402b5811432dcdf103f7204f53e
 https://github.com/Aryan185/ComfyUI-ExternalAPI-Helpers 0efcb5e28c15a60c39784c3a86f5e1a21fe5646a
