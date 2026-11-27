@@ -37,6 +37,10 @@ jobs:
           run_url=$(gh workflow run build.yml --ref bump/upstream)
           run_id=${run_url##*/}
           [[ $run_id =~ ^[0-9]+$ ]] || { echo "No run id in: $run_url"; exit 1; }
+          for _ in {1..30}; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" --silent && break
+            sleep 5
+          done
           gh run watch "$run_id" --exit-status
           gh pr merge "${{ steps.pr.outputs.pull-request-number }}" --squash --delete-branch
           gh workflow run build.yml --ref main
