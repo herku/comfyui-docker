@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "17 5 * * *"
   workflow_dispatch:
+    inputs:
+      bump_nodes:
+        description: Bump custom node pins even when ComfyUI is unchanged
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -21,14 +26,15 @@ jobs:
         run: scripts/bump.sh | tee -a "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
+          BUMP_NODES: ${{ inputs.bump_nodes }}
 
       - uses: peter-evans/create-pull-request@v8
         id: pr
         with:
           branch: bump/upstream
           delete-branch: true
-          commit-message: "Bump ComfyUI to ${{ steps.bump.outputs.comfyui }} and custom node pins"
-          title: "Bump ComfyUI to ${{ steps.bump.outputs.comfyui }} and custom node pins"
+          commit-message: ${{ steps.bump.outputs.title }}
+          title: ${{ steps.bump.outputs.title }}
           body: Automated upstream bump. The bump workflow builds this branch, squash-merges on success, then dispatches the main build that publishes the image.
 
       - name: Build bump branch, merge on success, publish from main
